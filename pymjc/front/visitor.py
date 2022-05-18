@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import enum
+from urllib.parse import parse_qs
 
 from pymjc.front.ast import *
 from pymjc.front.symbol import *
@@ -676,39 +677,67 @@ class FillSymbolTableVisitor(Visitor):
         return self.symbol_table
 
     def visit_program(self, element: Program) -> None:
-        pass
+        class_entry = ClassEntry()
+        self.symbol_table.add_scope(element.main_class.class_name_identifier, class_entry)
+        for class_decl in element.class_decl_list.get_elements():
+            class_entry = ClassEntry()
+            self.symbol_table.add_scope(class_decl.class_name, class_entry)
+
 
     def visit_main_class(self, element: MainClass) -> None:
-        pass
+        #method_entry = MethodEntry(Type(VOID))
+        self.symbol_table.set_curr_class(element.class_name_identifier)
+        #self.symbol_table.add_method('MAIN', method_entry)
+        #self.symbol_table.add_param(element.arg_name_ideintifier, IdentifierType(Type()))
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> None:
-        pass
+        if(self.symbol_table.contains_key(element.class_name)):
+            return ALREADY_DECLARED_CLASS
+        elif(not(self.symbol_table.contains_key(element.super_class_name))):
+            return UNDECLARED_SUPER_CLASS
+        else:
+            self.symbol_table.set_curr_class(element.class_name)
+            self.symbol_table.add_extends_entry(element.class_name, element.super_class_name)
+
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> None:
-        pass
+        if(not(self.symbol_table.contains_key(element.class_name))):
+            self.symbol_table.set_curr_class(element.class_name)
+        else:
+            return ALREADY_DECLARED_CLASS
 
     def visit_var_decl(self, element: VarDecl) -> None:
-        pass
+        if(self.symbol_table.curr_class.contains_field(element.name)):
+            return ALREADY_DECLARED_VAR
+        self.symbol_table.add_field(element.name, element.type)
      
 
     def visit_method_decl(self, element: MethodDecl) -> None:
-        pass
+        if(self.symbol_table.curr_class.contains_method(element.name)):
+            return ALREADY_DECLARED_METHOD
+        else:
+            self.symbol_table.add_method(element.name, MethodEntry(element.type))
 
     def visit_formal(self, element: Formal) -> None:
-        pass
+        if(self.symbol_table.curr_method.contains_param(element.name)):
+            return DUPLICATED_ARG
+        self.symbol_table.add_param(element.name, element.type)
 
 
     def visit_int_array_type(self, element: IntArrayType) -> None:
-        pass
+        self.symbol_table.add_local(None, element)
+
     
     def visit_boolean_type(self, element: BooleanType) -> None:
-        pass
+        self.symbol_table.add_local(None, element)
+
     
     def visit_integer_type(self, element: IntegerType) -> None:
-        pass
+        self.symbol_table.add_local(None, element)
+
 
     def visit_identifier_type(self, element: IdentifierType) -> None:
-        pass
+        self.symbol_table.add_local(element.name, element)
 
     
     def visit_block(self, element: Block) -> None:
