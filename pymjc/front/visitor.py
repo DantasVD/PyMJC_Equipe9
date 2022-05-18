@@ -685,10 +685,12 @@ class FillSymbolTableVisitor(Visitor):
 
 
     def visit_main_class(self, element: MainClass) -> None:
-        #method_entry = MethodEntry(Type(VOID))
-        self.symbol_table.set_curr_class(element.class_name_identifier)
-        #self.symbol_table.add_method('MAIN', method_entry)
-        #self.symbol_table.add_param(element.arg_name_ideintifier, IdentifierType(Type()))
+        entry = ClassEntry()
+        self.symbol_table.set_curr_class(element.class_name_identifier.name)
+        self.symbol_table.add_scope(element.class_name_identifier.name,entry)
+        element.class_name_identifier.accept(self)
+        element.arg_name_ideintifier.accept(self)
+        element.statement.accept(self)
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> None:
         if(self.symbol_table.contains_key(element.class_name)):
@@ -696,50 +698,82 @@ class FillSymbolTableVisitor(Visitor):
         elif(not(self.symbol_table.contains_key(element.super_class_name))):
             self.add_semantic_error(SemanticErrorType.UNDECLARED_SUPER_CLASS)
         else:
+            for var_decl in element.var_decl_list.get_elements():
+                    var_decl.accept(self)
+            
+            for method_decl in element.method_decl_list.get_elements():
+                method_decl.accept(self)
+
+            element.class_name.accept(self)
+            element.super_class_name.accept(self)
             self.symbol_table.set_curr_class(element.class_name)
             self.symbol_table.add_extends_entry(element.class_name, element.super_class_name)
 
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> None:
+        actual = ClassEntry(element.class_name.name)
         if(not(self.symbol_table.contains_key(element.class_name))):
             self.symbol_table.set_curr_class(element.class_name)
+            element.class_name.accept(self)
+                
+            for var_decl in element.var_decl_list.get_elements():
+                var_decl.accept(self)
+        
+            for method_decl in element.method_decl_list.get_elements():
+                method_decl.accept(self)
         else:
             self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_CLASS)
 
     def visit_var_decl(self, element: VarDecl) -> None:
-        if(self.symbol_table.curr_class.contains_field(element.name)):
+        state = self.symbol_table.add_local(element.name.name) 
+        if (self.symbol_table.curr_method==None):
+            state = self.symbol_table.add_local(element.name.name) 
+        else:
+            state = self.symbol_table.add_field(element.name.name)
+        if(not state):
             self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_VAR)
         self.symbol_table.add_field(element.name, element.type)
+        element.type.accept(self)
+        element.name.accept(self)
      
 
     def visit_method_decl(self, element: MethodDecl) -> None:
         if(self.symbol_table.curr_class.contains_method(element.name)):
             self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_METHOD)
-
         else:
             self.symbol_table.add_method(element.name, MethodEntry(element.type))
+            element.type.accept(self)
+            element.name.accept(self)
+            element.return_exp.accept(self)
+            for formal_param in element.formal_param_list.get_elements():
+                formal_param.accept(self)
+            for var_decl in element.var_decl_list.get_elements():
+                var_decl.accept(self)
+            for i in range(element.statement_list.size):
+                element.statement_list.element_at(i).accept(self)
 
     def visit_formal(self, element: Formal) -> None:
         if(self.symbol_table.curr_method.contains_param(element.name)):
             self.add_semantic_error(SemanticErrorType.DUPLICATED_ARG)
         self.symbol_table.add_param(element.name, element.type)
+        element.name.accept(self)
+        element.type.accept(self)
 
 
     def visit_int_array_type(self, element: IntArrayType) -> None:
-        self.symbol_table.add_local(None, element)
+        return None
 
     
     def visit_boolean_type(self, element: BooleanType) -> None:
-        self.symbol_table.add_local(None, element)
+        return None
 
     
     def visit_integer_type(self, element: IntegerType) -> None:
-        self.symbol_table.add_local(None, element)
+        return None
 
 
     def visit_identifier_type(self, element: IdentifierType) -> None:
-        self.symbol_table.add_local(element.name, element)
-
+        return None
     
     def visit_block(self, element: Block) -> None:
         for index in range(element.statement_list.size()):
