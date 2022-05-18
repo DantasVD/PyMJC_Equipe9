@@ -706,8 +706,8 @@ class FillSymbolTableVisitor(Visitor):
 
             element.class_name.accept(self)
             element.super_class_name.accept(self)
-            self.symbol_table.set_curr_class(element.class_name)
-            self.symbol_table.add_extends_entry(element.class_name, element.super_class_name)
+            self.symbol_table.set_curr_class(element.class_name.name)
+            self.symbol_table.add_extends_entry(element.class_name.name, element.super_class_name.name)
 
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> None:
@@ -1235,103 +1235,201 @@ class TypeCheckingVisitor(TypeVisitor):
         return self.symbol_table
 
     def visit_program(self, element: Program) -> Type:
-        pass
+        element.main_class.accept_type(self)
+        for class_decl in element.class_decl_list:
+            class_decl.accept_type(self)
+        return None
 
     def visit_main_class(self, element: MainClass) -> Type:
-        pass
+        element.class_name_identifier.accept_type(self)
+        element.arg_name_ideintifier.accept_type(self)
+        element.statement.accept_type(self)
+        return None
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> Type:
-        pass
+        self.symbol_table.set_curr_class(element.class_name.name)
+        element.class_name.accept_type(self)
+        element.super_class_name.accept_type(self)
+        for var_decl in element.var_decl_list:
+            var_decl.accept_type(self)
+        for method_decl in element.method_decl_list:
+            method_decl.accept_type(self)
+        return None
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> Type:
-        pass
+        self.symbol_table.set_curr_class(element.class_name.name)
+        element.class_name.accept_type(self)
+        for var_decl in element.var_decl_list:
+            var_decl.accept_type(self)
+        for method_decl in element.method_decl_list:
+            method_decl.accept_type(self)
+        return None
+
 
     def visit_var_decl(self, element: VarDecl) -> Type:
-        pass
+        element.name.accept_type(self)
+        return None
 
     def visit_method_decl(self, element: MethodDecl) -> Type:
-        pass
+        self.symbol_table.set_curr_method(element.name.name)
+        element.type.accept_type(self)
+        for formal_param in element.formal_param_list:
+            formal_param.accept_type(self)
+        for var_decl in element.var_decl_list:
+            var_decl.accept_type(self)
+        for statement in element.statement_list:
+            statement.accept_type(self)
+        return None
 
     def visit_formal(self, element: Formal) -> Type:
-        pass
+        element.type.accept_type(self)
+        return None
 
     def visit_int_array_type(self, element: IntArrayType) -> Type:
-        pass
+        return None
     
     def visit_boolean_type(self, element: BooleanType) -> Type:
-        pass
+        return None
     
     def visit_integer_type(self, element: IntegerType) -> Type:
-        pass
+        return None
 
     def visit_identifier_type(self, element: IdentifierType) -> Type:
-        pass
+        return None
     
     def visit_block(self, element: Block) -> Type:
-        pass
+        for statement in element.statement_list:
+            statement.accept_type(self)
+        return None
 
     def visit_if(self, element: If) -> Type:
-        pass
+        element.condition_exp.accept_type(self)
+        element.if_statement.accept_type(self)
+        element.else_statement.accept_type(self)
+        return None
 
     def visit_while(self, element: While) -> Type:
-        pass
+        element.condition_exp.accept_type(self)
+        element.statement.accept_type(self)
+        return None
     
     def visit_print(self, element: Print) -> Type:
-        pass
+        element.print_exp.accept_type(self)
+
 
     def visit_assign(self, element: Assign) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
     
     def visit_array_assign(self, element: ArrayAssign) -> Type:
-        pass
+        element.array_name.accept_type(self)
+        element.array_exp.accept_type(self)
+        element.right_side.accept_type(self)
+       
+        return None
     
     def visit_and(self, element: And) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
 
     def visit_less_than(self, element: LessThan) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
 
     def visit_plus(self, element: Plus) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
+        
 
     def visit_minus(self, element: Minus) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
     
     def visit_times(self, element: Times) -> Type:
-        pass
+        element.left_side.accept_type(self)
+        element.right_side.accept_type(self)
+        return None
+        
 
     def visit_array_lookup(self, element: ArrayLookup) -> Type:
-        pass
+        element.out_side_exp.accept_type(self)
+        element.in_side_exp.accept_type(self)
+        
+        return None
 
     def visit_array_length(self, element: ArrayLength) -> Type:
-        pass
+        element.length_exp.accept_type(self)
+        return None
 
     def visit_call(self, element: Call) -> Type:
-        pass
+        expType = element.callee_exp.accept_type(self)
+        element.callee_name.accept_type(self)
+        argTypes = []
+        
+        if(type(expType) == IdentifierType):
+
+            for arg in element.arg_list:
+                arg.accept_type(self)
+
+            containMethod = self.symbol_table.get_class_entry(expType.name).contains_method(element.callee_name.name)
+            
+            if(containMethod):
+                self.symbol_table.get_class_entry(expType.name).get_method(element.callee_name.name)
+        
+        return None
 
     def visit_integer_literal(self, element: IntegerLiteral) -> Type:
-        pass
+        return None
 
     def visit_true_exp(self, element: TrueExp) -> Type:
-        pass
+        return None
 
     def visit_false_exp(self, element: FalseExp) -> Type:
-        pass
+        return None
 
     def visit_identifier_exp(self, element: IdentifierExp) -> Type:
-        pass
+
+        if self.symbol_table.curr_class.contains_field(element.name):
+            self.symbol_table.curr_class.get_field(element.name)
+
+        if self.symbol_table.curr_method != None:
+
+            if self.symbol_table.curr_method.contains_local(element.name):
+                self.symbol_table.curr_method.get_local(element.name)
+
+            if self.symbol_table.curr_method.contains_param(element.name):
+                self.symbol_table.curr_method.get_param_by_name(element.name)
+
+        return None
 
     def visit_this(self, element: This) -> Type:
-        pass
+        return None
 
     def visit_new_array(self, element: NewArray) -> Type:
-        pass
+        element.new_exp.accept_type(self)
+        return None
 
     def visit_new_object(self, element: NewObject) -> Type:
-        pass
+        element.object_name.accept_type(self)
+        return None
 
     def visit_not(self, element: Not) -> Type:
-        pass
+        element.negated_exp.accept_type(self)
+        return None
 
     def visit_identifier(self, element: Identifier) -> Type:
-        pass
+        if self.symbol_table.curr_class.contains_field(element.name):
+           self.symbol_table.curr_class.get_field(element.name)
+
+        if self.symbol_table.curr_method != None:
+            if self.symbol_table.curr_method.contains_local(element.name):
+                self.symbol_table.curr_method.get_local(element.name)
+
+            if self.symbol_table.curr_method.contains_param(element.name):
+                self.symbol_table.curr_method.get_param_by_name(element.name)
+        return None
