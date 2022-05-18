@@ -21,7 +21,7 @@ class Program(Component):
         visitor.visit_program(self)
 
     def accept_type(self, visitor: TypeVisitor) -> Type:
-        return visitor.visit_program(self)
+        return visitor.visit_program(visitor, self)
 
 class MainClass(Component):
     def __init__(self, class_name_identifier: Identifier, arg_name_ideintifier: Identifier, statement: Statement) -> None:

@@ -676,8 +676,9 @@ class FillSymbolTableVisitor(Visitor):
     def get_symbol_table(self) -> SymbolTable:
         return self.symbol_table
 
+    
     def visit_program(self, element: Program) -> None:
-        if element and element.class_decl_list is not None:
+        if element is not None and element.class_decl_list is not None:
             element.main_class.accept(self)
             for class_decl in element.class_decl_list.get_elements():
                 if class_decl is not None:
@@ -1236,14 +1237,13 @@ class TypeCheckingVisitor(TypeVisitor):
         return self.symbol_table
 
     def visit_program(self, element: Program) -> Type:
-
-        element.main_class.accept_type(self)
-        for class_decl in element.class_decl_list.get_elements():
-            if(type(class_decl) is ClassDecl):
-                class_decl.accept_type(self)
-            else:
-                pass
-                
+        if element is not None and element.class_decl_list is not None:
+            element.main_class.accept_type(self)
+            for class_decl in element.class_decl_list.get_elements():
+                if(type(class_decl) is ClassDecl):
+                    class_decl.accept_type(self)
+                else:
+                    pass
         return None
 
     def visit_main_class(self, element: MainClass) -> Type:
@@ -1273,8 +1273,9 @@ class TypeCheckingVisitor(TypeVisitor):
 
 
     def visit_var_decl(self, element: VarDecl) -> Type:
+        var_type = element.type.accept_type(self)
         element.name.accept_type(self)
-        return None
+        return var_type
 
     def visit_method_decl(self, element: MethodDecl) -> Type:
         self.symbol_table.set_curr_method(element.name.name)
@@ -1289,7 +1290,7 @@ class TypeCheckingVisitor(TypeVisitor):
 
     def visit_formal(self, element: Formal) -> Type:
         element.type.accept_type(self)
-        return element
+        return type(element)
 
     def visit_int_array_type(self, element: IntArrayType) -> Type:
         return element
