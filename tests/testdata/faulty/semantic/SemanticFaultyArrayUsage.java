@@ -10,6 +10,7 @@ class B {
       int[] aux1;
       int aux2;
       int[] aux3;
+      int aux4;
       boolean value;
 
       value = true;
