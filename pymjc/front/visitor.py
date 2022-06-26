@@ -1552,7 +1552,17 @@ class TranslateVisitor(IRVisitor):
 
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> translate.Exp:
-        pass
+        element.class_name_id.accept_ir(self)
+        element.super_class_name_id.accept_ir(self)
+
+        self.symbol_table.set_curr_class(element.class_name_id.name)
+
+        for index in range(element.var_decl_list.size()):
+            element.var_decl_list.element_at(index).accept_ir(self) 
+        for index in range(element.method_decl_list.size()):
+            element.method_decl_list.element_at(index).accept_ir(self)
+        
+        return None
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> translate.Exp:
         element.class_name_id.accept_ir(self)
@@ -1630,9 +1640,17 @@ class TranslateVisitor(IRVisitor):
     def visit_block(self, element: Block) -> translate.Exp:
         pass
 
-    @abstractmethod
     def visit_if(self, element: If) -> translate.Exp:
-        pass
+        cond_exp:tree.Exp =element.condition_exp.accept_ir(self).un_ex()
+        true_exp:tree.EXP=tree.EXP(element.if_statement.accept_ir(self).un_ex())
+        false_exp:tree.EXP=tree.EXP(element.else_statement.accept_ir(self).un_ex())
+        truelbl:tree.Label = Label()
+        falselbl:tree.Label= Label()
+        statementtrue:tree.SEQ=tree.SEQ(tree.LABEL(truelbl),true_exp)
+        statementfalse:tree.SEQ=tree.SEQ(tree.LABEL(falselbl),false_exp)
+        statements:tree.SEQ(statementtrue,statementfalse)
+        cjumpif:tree.CJUMP=tree.CJUMP(tree.CJUMP.EQ,tree.CONST(1),cond_exp,truelbl,falselbl)
+        return tree.ESEQ(cjumpif,statements)
   
     @abstractmethod
     def visit_while(self, element: While) -> translate.Exp:
@@ -1649,29 +1667,43 @@ class TranslateVisitor(IRVisitor):
 
         return translate.Exp(tree.ESEQ(assign, tree.CONST(0))) 
 
-    @abstractmethod
     def visit_array_assign(self, element: ArrayAssign) -> translate.Exp:
+        identifier:tree.Exp=element.array_name_id.accept_ir(self).un_ex()
+        array_exp:tree.Exp=element.array_exp.accept_ir(self).un_ex()
+        right_side:tree.Exp=element.right_side_exp.accept_ir(self).un_ex()
+        #Operação para localização do array
+        operation:tree.BINOP=tree.BINOP(tree.BINOP.PLUS,identifier,tree.BINOP(tree.BINOP.MUL,array_exp,tree.CONST(self.current_frame.word_size)))
+
+
         pass
 
-    @abstractmethod
     def visit_and(self, element: And) -> translate.Exp:
-        pass
+        left: translate.Exp=element.left_side_exp.accept_ir(self)
+        right: translate.Exp=element.right_side_exp.accept_ir(self)
+
+        return translate.Exp(tree.BINOP(tree.BINOP.AND,left.un_ex(),right.un_ex()))
 
     @abstractmethod
     def visit_less_than(self, element: LessThan) -> translate.Exp:
         pass
 
-    @abstractmethod
+    
     def visit_plus(self, element: Plus) -> translate.Exp:
-        pass
+        left: translate.Exp=element.left_side_exp.accept_ir(self)
+        right: translate.Exp=element.right_side_exp.accept_ir(self)
 
-    @abstractmethod
+        return translate.Exp(tree.BINOP(tree.BINOP.PLUS,left,right))
+
     def visit_minus(self, element: Minus) -> translate.Exp:
-        pass
+        left: translate.Exp=element.left_side_exp.accept_ir(self)
+        right: translate.Exp=element.right_side_exp.accept_ir(self)
 
-    @abstractmethod
+        return translate.Exp(tree.BINOP(tree.BINOP.MINUS,left,right))
+    
     def visit_times(self, element: Times) -> translate.Exp:
-        pass
+        left: translate.Exp=element.left_side_exp.accept_ir(self)
+        right: translate.Exp=element.right_side_exp.accept_ir(self)
+        return translate.Exp(tree.BINOP(tree.BINOP.MUL,left,right))
 
     @abstractmethod
     def visit_array_lookup(self, element: ArrayLookup) -> translate.Exp:
